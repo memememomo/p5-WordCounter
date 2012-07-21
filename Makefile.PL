@@ -2,7 +2,7 @@ use inc::Module::Install;
 name 'WordCounter';
 all_from 'lib/WordCounter.pm';
 
-# requires '';
+requires 'mojo';
 
 tests 't/*.t';
 author_tests 'xt';
