@@ -1,0 +1,17 @@
+% layout "default", h1 => '';
+
+<div>
+  <table class="table">
+    <tbody>
+    <% for my $r ( @{ $results } ) { %>
+    <tr>
+      <th>
+	<%= $r->{surface} %><br />
+	(<%= $r->{pos} %>)
+      </th>
+      <td><%= $r->{ratio} * 100 %>(%)</td>
+    </tr>
+    <% } %>
+    </tbody>
+  </table>
+</div>

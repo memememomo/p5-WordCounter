@@ -1,0 +1,38 @@
+% layout "default", h1 => '';
+
+<div>
+  <form action="<%= url_for('wordcount') %>" method="post">
+    <table class="table">
+      <tbody>
+	<tr>
+	  <th>URL</th>
+	  <td>
+	    <input type="text" name="url" />
+	  </td>
+	</tr>
+	<tr>
+	  <th>設定</th>
+	  <td>
+	    <h3>属性</h3>
+	    <label for="on_description">
+	      <input type="checkbox" name="on_description" value="1" checked />DESCRIPTION
+	    </label>
+	    <label for="on_keywords">
+	      <input type="checkbox" name="on_keywords" value="1" checked />KEYWORDS
+	    </label>
+	    <label for="on_alt">
+	      <input type="checkbox" name="on_alt" value="1" checked />ALT
+	    </label>
+	    <h3>品詞</h3>
+	    <% for my $verb ( @{ $verbs } ) { %>
+	    <label for="verb_<%= $verb->{number} %>">
+	      <input type="checkbox" name="verb_<%= $verb->{number} %>" value="1"<% if ( $verb->{checked} ) { %> checked<% } %> /><%= $verb->{str} %>
+	    </label>
+	    <% } %>
+	  </td>
+	</tr>
+      </tbody>
+    </table>
+    <input type="submit" value="確認" />
+  </form>
+</div>

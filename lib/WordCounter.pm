@@ -5,6 +5,7 @@ use utf8;
 use Encode;
 use Encode::Guess;
 use Mojo::UserAgent;
+use Data::Dumper;
 
 our $VERSION = '0.01';
 
@@ -12,6 +13,7 @@ our $VERSION = '0.01';
 sub new {
     my $class = shift;
     my %args = @_ == 1 ? %{$_[0]} : @_;
+
     Carp::croak('yahoo_appid is needed!') unless defined $args{yahoo_appid};
     my $base_url = $args{yahoo_base_url}
         || 'http://jlp.yahooapis.jp/MAService/V1/parse';
@@ -20,6 +22,10 @@ sub new {
         appid    => $args{yahoo_appid},
         base_url => $base_url,
         ua       => Mojo::UserAgent->new,
+        on_description => $args{on_description} || 0,
+        on_keywords    => $args{on_keywords}    || 0,
+        on_alt         => $args{on_alt}         || 0,
+        filter         => $args{filter}         || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     };
 
     return bless $params, $class;
@@ -36,7 +42,7 @@ sub fetch_content {
     my ($self, $url) = @_;
 
     my $tx = $self->{ua}->get($url);
-    return unless $tx->success;
+    die "Can't access to $url" unless $tx->success;
 
     my $sentence = '';
 
@@ -53,21 +59,28 @@ sub fetch_content {
         sub {
             my ($e) = @_;
             my $name = $e->attrs('name');
-            if ( $name && ( $name eq 'keywords' || $name eq 'description' ) ) {
-                $sentence .= $e->attrs('content');
+
+            if ( $name ) {
+                if ( ($self->{on_keywords} && $name eq 'keywords')
+                     || ($self->{on_description} && $name eq 'description') ) {
+                    $sentence .= $e->attrs('content');
+                }
             }
         }
     );
 
-    $dom->find('img')->each(
-        sub {
-            my ($e) = @_;
-            my $alt = $e->attrs('alt');
-            if ( $alt ) {
-                $sentence .= $alt;
+    if ( $self->{on_alt} ) {
+        $dom->find('img')->each(
+            sub {
+                my ($e) = @_;
+                my $alt = $e->attrs('alt');
+                if ( $alt ) {
+                    $sentence .= $alt;
+                }
             }
-        }
-    );
+        );
+    }
+
 
     my $body = $tx->res->dom->at('body');
 
@@ -80,19 +93,16 @@ sub fetch_content {
     $body =~ s/<.*?>//g;
     $body =~ s/\r\n//g;
     $body =~ s/\n//g;
+
     $sentence .= $body;
 
-    my $enc = guess_encoding($sentence, qw/euc-jp shiftjis 7bit-jis/);
-
-    return decode($enc, $sentence);
+    return $sentence;
 }
 
 sub count_word {
-    my ($self, $sentence, $filter) = @_;
+    my ($self, $sentence) = @_;
 
-    $filter ||= [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
-
-    my $uniq_filter = join('|', @$filter);
+    my $uniq_filter = join('|', @{$self->{filter}});
 
     my $tx =
         $self->{ua}->post_form(
@@ -115,9 +125,9 @@ sub count_word {
             my ($e) = @_;
 
             my %col = (
-                count   => $e->count->text,
-                surface => $e->surface->text,
-                pos     => $e->pos->text,
+                count   => decode_utf8( $e->count->text ),
+                surface => decode_utf8( $e->surface->text ),
+                pos     => decode_utf8( $e->pos->text ),
             );
             $total += $col{count};
 
